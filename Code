@@ -1,89 +1,112 @@
-"""# Corporate Partners Visualization Notebook
+# =====================================================
+# Corporate Partnerships Analysis - Visualization Script
+# =====================================================
 
-This Jupyter Notebook analyzes and visualizes corporate partnership data for universities based on two tables:
-1. **tiers_table** – containing details about partnership tiers, annual fees, and benefits.
-2. **partners_table** – containing information on partner companies, departments, and technology sectors.
-
-The goal is to gain insights into partnership distributions, tier structures, and sector engagement.
-"""
-
-# Import necessary libraries
+# --- 1. Setup & Imports ---
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
+import os
 from IPython.display import display
 
+# Ensure figures folder exists
+os.makedirs("figures", exist_ok=True)
 
-# Load Excel data
-excel_path = 'Corporate Partners_Dataset.xlsx'
-tiers_df = pd.read_excel(excel_path, sheet_name='tiers_table')
-partners_df = pd.read_excel(excel_path, sheet_name='partners_table')
+# Load Excel file
+file_path = "Corporate Partners_Dataset.xlsx"
 
-# Display dataset summaries
-print("Tiers Table Preview:")
-display(tiers_df.head())
-print("\nPartners Table Preview:")
+partners_df = pd.read_excel(file_path, sheet_name="partners_table")
+tiers_df = pd.read_excel(file_path, sheet_name="tiers_table")
+
+# Display previews
 display(partners_df.head())
+display(tiers_df.head())
 
-# --- Data Cleaning ---
-# Fill missing values with 'N/A' for better visualization
-for df in [tiers_df, partners_df]:
-    df.fillna('N/A', inplace=True)
+# =====================================================
+# --- 2. Visualization 1: Partner Count per University ---
+# =====================================================
 
-# --- Visualization 1: Number of Partner Companies per University ---
-partners_per_uni = partners_df.groupby('University')['Partner Company'].count().sort_values(ascending=False)
-plt.figure(figsize=(10,6))
-partners_per_uni.plot(kind='bar', color='steelblue')
-plt.title('Number of Partner Companies per University')
-plt.xlabel('University')
-plt.ylabel('Number of Partners')
-plt.xticks(rotation=45, ha='right')
+# Count partners by university
+partner_count = partners_df.groupby("University")["Partner Company"].count().sort_values(ascending=False)
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x=partner_count.values, y=partner_count.index, palette="crest")
+plt.title("Number of Corporate Partners per University", fontsize=14, fontweight="bold")
+plt.xlabel("Number of Partners")
+plt.ylabel("University")
 plt.tight_layout()
+plt.savefig("figures/partner_count_per_university.png", dpi=300)
 plt.show()
 
-# --- Visualization 2: Distribution of Partners by Technology Sector ---
-sector_dist = partners_df['Technology Sector'].value_counts()
-plt.figure(figsize=(7,7))
-sector_dist.plot(kind='pie', autopct='%1.1f%%', startangle=140)
-plt.title('Distribution of Partners by Technology Sector')
-plt.ylabel('')
-plt.show()
+# =====================================================
+# --- 3. Visualization 2: Distribution of Technology Sectors ---
+# =====================================================
 
-# --- Visualization 3: Average Annual Fee by Tier (if available) ---
-# Convert fee column to numeric when possible
-tiers_df['Annual Fee (if published)'] = pd.to_numeric(tiers_df['Annual Fee (if published)'], errors='coerce')
-avg_fee_tier = tiers_df.groupby('Tier Name')['Annual Fee (if published)'].mean().dropna()
-if not avg_fee_tier.empty:
-    plt.figure(figsize=(8,5))
-    avg_fee_tier.plot(kind='bar', color='darkgreen')
-    plt.title('Average Annual Fee by Partnership Tier')
-    plt.xlabel('Tier Name')
-    plt.ylabel('Average Annual Fee (USD)')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.show()
-else:
-    print("No numeric annual fee data available to plot.")
+sector_count = partners_df["Technology Sector"].value_counts()
 
-# --- Visualization 4: Number of Tiers per University ---
-tiers_per_uni = tiers_df.groupby('University')['Tier Name'].nunique().sort_values(ascending=False)
-plt.figure(figsize=(10,6))
-tiers_per_uni.plot(kind='bar', color='orange')
-plt.title('Number of Unique Tiers per University')
-plt.xlabel('University')
-plt.ylabel('Number of Tiers')
-plt.xticks(rotation=45, ha='right')
+plt.figure(figsize=(8, 8))
+plt.pie(sector_count, labels=sector_count.index, autopct="%1.1f%%", startangle=140)
+plt.title("Distribution of Partner Technology Sectors", fontsize=14, fontweight="bold")
 plt.tight_layout()
+plt.savefig("figures/sector_distribution.png", dpi=300)
 plt.show()
 
-# --- Visualization 5: Partner Count by Department ---
-department_partners = partners_df.groupby('Department')['Partner Company'].count().sort_values(ascending=False).head(10)
-plt.figure(figsize=(10,6))
-department_partners.plot(kind='bar', color='purple')
-plt.title('Top 10 Departments by Number of Partners')
-plt.xlabel('Department')
-plt.ylabel('Number of Partners')
-plt.xticks(rotation=45, ha='right')
+# =====================================================
+# --- 4. Visualization 3: Average Published Fee by Tier ---
+# =====================================================
+
+# Clean and convert the Annual Fee column
+tiers_df["Annual Fee (if published)"] = (
+    tiers_df["Annual Fee (if published)"]
+    .astype(str)
+    .str.replace(r"[\$,]", "", regex=True)
+    .str.extract(r"(\d+\.?\d*)")[0]
+)
+
+tiers_df["Annual Fee (if published)"] = pd.to_numeric(tiers_df["Annual Fee (if published)"], errors="coerce")
+
+# Calculate mean fee per tier
+fee_by_tier = tiers_df.groupby("Tier Name")["Annual Fee (if published)"].mean().dropna().sort_values(ascending=True)
+
+plt.figure(figsize=(10, 5))
+sns.barplot(x=fee_by_tier.values, y=fee_by_tier.index, palette="viridis")
+plt.title("Average Published Annual Fee by Tier", fontsize=14, fontweight="bold")
+plt.xlabel("Average Annual Fee (USD)")
+plt.ylabel("Tier")
 plt.tight_layout()
+plt.savefig("figures/average_fee_by_tier.png", dpi=300)
 plt.show()
 
-print("\nAll visualizations generated successfully.")
+# =====================================================
+# --- 5. Visualization 4: Heatmap of Partner Distribution ---
+# =====================================================
+
+# Create pivot table
+heatmap_data = partners_df.pivot_table(
+    index="University",
+    columns="Technology Sector",
+    values="Partner Company",
+    aggfunc="count",
+    fill_value=0
+)
+
+plt.figure(figsize=(14, 7))
+sns.heatmap(heatmap_data, annot=True, fmt="d", cmap="Blues")
+plt.title("Heatmap: Partner Distribution by University and Sector", fontsize=14, fontweight="bold")
+plt.xlabel("Technology Sector")
+plt.ylabel("University")
+plt.tight_layout()
+plt.savefig("figures/heatmap_partner_distribution.png", dpi=300)
+plt.show()
+
+# =====================================================
+# --- 6. Summary ---
+# =====================================================
+
+print("""
+Summary of Visual Insights:
+1. The bar chart shows which universities maintain the most extensive corporate partnerships.
+2. The pie chart reveals which technology sectors dominate across the top ECE programs.
+3. The average tier fee comparison provides insight into how universities structure their partnership levels.
+4. The heatmap highlights which universities engage most heavily with specific sectors.
+""")
