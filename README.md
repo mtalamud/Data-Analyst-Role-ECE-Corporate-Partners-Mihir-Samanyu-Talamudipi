@@ -15,4 +15,4 @@ The analysis includes:
 
 - Visual exploration of trends across institutions
 
-All findings are organized into a structured dataset and presented with data visualizations for clarity. To run the python script to see the visualizations, make sure everything is in the same folder.
+All findings are organized into a structured dataset and presented with data visualizations for clarity. To run the python script to see the visualizations, make sure everything is in the same folder. As for the report and dataset - download the raw files to open them.
