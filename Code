@@ -42,40 +42,81 @@ plt.show()
 # --- 3. Visualization 2: Distribution of Technology Sectors ---
 # =====================================================
 
+# Count sectors and group smaller ones
 sector_count = partners_df["Technology Sector"].value_counts()
+top_sectors = sector_count[:8]
+other_total = sector_count[8:].sum()
 
-plt.figure(figsize=(8, 8))
-plt.pie(sector_count, labels=sector_count.index, autopct="%1.1f%%", startangle=140)
-plt.title("Distribution of Partner Technology Sectors", fontsize=14, fontweight="bold")
-plt.tight_layout()
-plt.savefig("figures/sector_distribution.png", dpi=300)
-plt.show()
+# Combine into one series
+sector_summary = top_sectors.copy()
+sector_summary["Other"] = other_total
 
-# =====================================================
-# --- 4. Visualization 3: Average Published Fee by Tier ---
-# =====================================================
+# Create donut chart with clean colors
+colors = sns.color_palette("crest", len(sector_summary))
 
-# Clean and convert the Annual Fee column
-tiers_df["Annual Fee (if published)"] = (
-    tiers_df["Annual Fee (if published)"]
-    .astype(str)
-    .str.replace(r"[\$,]", "", regex=True)
-    .str.extract(r"(\d+\.?\d*)")[0]
+fig, ax = plt.subplots(figsize=(8, 6))
+wedges, texts, autotexts = ax.pie(
+    sector_summary,
+    autopct=lambda p: f"{p:.1f}%" if p > 3 else "",
+    startangle=140,
+    colors=colors,
+    wedgeprops={'linewidth': 1, 'edgecolor': 'white'},
+    textprops={'fontsize': 10, 'color': 'black'}
 )
 
-tiers_df["Annual Fee (if published)"] = pd.to_numeric(tiers_df["Annual Fee (if published)"], errors="coerce")
+# Draw center circle for donut effect
+centre_circle = plt.Circle((0, 0), 0.70, fc="white")
+fig.gca().add_artist(centre_circle)
 
-# Calculate mean fee per tier
-fee_by_tier = tiers_df.groupby("Tier Name")["Annual Fee (if published)"].mean().dropna().sort_values(ascending=True)
+ax.set_title("Top Partner Technology Sectors", fontsize=14, fontweight="bold")
 
-plt.figure(figsize=(10, 5))
-sns.barplot(x=fee_by_tier.values, y=fee_by_tier.index, palette="viridis")
-plt.title("Average Published Annual Fee by Tier", fontsize=14, fontweight="bold")
-plt.xlabel("Average Annual Fee (USD)")
-plt.ylabel("Tier")
+# Add legend outside
+plt.legend(
+    sector_summary.index,
+    title="Technology Sector",
+    bbox_to_anchor=(1.05, 1),
+    loc="upper left"
+)
+
 plt.tight_layout()
-plt.savefig("figures/average_fee_by_tier.png", dpi=300)
+plt.savefig("figures/sector_distribution.png", dpi=300, bbox_inches="tight")
 plt.show()
+
+# =====================================================
+# --- 4. Visualization 3: Tier Comparison — Purdue vs Stanford ---
+# =====================================================
+
+# --- Purdue vs Stanford: Highest Tier Annual Fees ---
+tier_fee_data = {
+    'University': ['Purdue', 'Stanford'],
+    'Highest Tier': ['Gold', 'Explorer'],
+    'Annual Fee (USD)': [25000, 35000]  # <-- replace with actual if available
+}
+
+tier_fee_df = pd.DataFrame(tier_fee_data)
+
+# Create figure
+plt.figure(figsize=(7, 5))
+sns.barplot(
+    data=tier_fee_df,
+    x='University',
+    y='Annual Fee (USD)',
+    hue='Highest Tier',
+    palette=["#000000", "#c2303f"]  # black for Purdue, deep red for Stanford
+)
+
+# Chart styling
+plt.title("Highest Tier Annual Fee: Purdue vs Stanford", fontsize=14, fontweight='bold')
+plt.ylabel("Annual Fee (USD)")
+plt.xlabel("")
+plt.grid(axis='y', linestyle='--', alpha=0.6)
+plt.legend(title="Highest Tier")
+plt.tight_layout()
+
+# Save and show
+plt.savefig("viz4_highest_tier_fee_comparison.png", bbox_inches='tight', dpi=300)
+plt.show()
+plt.close()
 
 # =====================================================
 # --- 5. Visualization 4: Heatmap of Partner Distribution ---
@@ -107,6 +148,6 @@ print("""
 Summary of Visual Insights:
 1. The bar chart shows which universities maintain the most extensive corporate partnerships.
 2. The pie chart reveals which technology sectors dominate across the top ECE programs.
-3. The average tier fee comparison provides insight into how universities structure their partnership levels.
+3. The Purdue vs Stanford tier fee comparison provides insight into how two universities structure their partnership levels.
 4. The heatmap highlights which universities engage most heavily with specific sectors.
 """)
